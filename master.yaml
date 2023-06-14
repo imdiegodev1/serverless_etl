@@ -17,7 +17,7 @@ Resources:
       TemplateURL: https://code-diego-dsi.s3.amazonaws.com/LambdaLayer.yaml
   
   ##Layer 1
-  RolesAndPolicies:
+  CodeBuildProject:
     Type: "AWS::CloudFormation::Stack"
     DependsOn: LambdaLayer
     Properties:
