@@ -1,0 +1,97 @@
+Transform: AWS::Serverless-2016-10-31
+
+Description: "Lambda utilities to start creating functions"
+
+Parameters:
+  
+  CodeBuildProject:
+    Type: String
+    Description: "Codebuild project to deploy lambdas"
+
+Resources:
+
+  #Policies
+  ManagedPolicyforlambda:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      Description: "This is sample CFN template"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "codebuild"
+            Effect: "Allow"
+            Action:
+              - "codebuild:StartBuild"
+              - "codebuild:BatchGet*"
+              - "codebuild:List*"
+            Resource: !GetAtt  CodeBuildProject.Arn
+          - Sid: "dynamodbaccess"
+            Effect: "Allow"
+            Action:
+              - "dynamodb:Scan"
+              - "dynamodb:GetItem"
+              - "dynamodb:PutItem"
+              - "dynamodb:UpdateItem"
+              - "dynamodb:DeleteItem"
+            Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/my-table"
+          - Sid: "SNStopicaccess"
+            Effect: "Allow"
+            Action: "sns:Publish"
+            Resource: !Ref  SNSTopic
+          - Sid: "glueaccess"
+            Effect: "Allow"
+            Action: "glue:*"
+            Resource:
+                - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueDB}"
+                - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:crawler/${CrawlPartitionedFile}"
+                - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDB}/*"
+                - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+  #Roles
+  LambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+          - !Ref ManagedPolicyforlambda
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  LambdaLayer:
+      Type: AWS::Serverless::LayerVersion
+      Properties:
+        LayerName: cfnresource-lib
+        Description: My layer
+        ContentUri: ./myLayer
+        CompatibleRuntimes:
+          - python3.10
+        LicenseInfo: MIT
+
+  LambdaLayerFactory:
+      Type: AWS::Serverless::LayerVersion
+      Properties:
+        LayerName: etlfactory
+        Description: My layer
+        ContentUri: ./myLayerFactory
+        CompatibleRuntimes:
+          - python3.10
+        LicenseInfo: MIT
+
+Outputs:
+#Policies
+  ManagedPolicyforlambda:
+    Value: !Ref ManagedPolicyforlambda
+    Export:
+      Name: ManagedPolicyforlambda
+
+#Roles
+  LambdaRole:
+    Value: !Ref LambdaRole
+    Export:
+      Name: LambdaRole

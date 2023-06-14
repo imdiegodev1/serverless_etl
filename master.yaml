@@ -10,13 +10,13 @@ Parameters:
     AllowedPattern: "[a-zA-Z][a-zA-Z0-9_-]*"
 
 Resources:
-  ##Layer 0
+  ##Stack 0
   LambdaLayer:
     Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL: https://code-diego-dsi.s3.amazonaws.com/LambdaLayer.yaml
   
-  ##Layer 1
+  ##Stack 1
   CodeBuildProject:
     Type: "AWS::CloudFormation::Stack"
     DependsOn: LambdaLayer
@@ -26,3 +26,11 @@ Resources:
         LambdaLayerParameter: !GetAtt LambdaLayer.Outputs.LambdaLayerParameter
         pS3BucketName: !Ref pS3BucketName
 
+  ##Stack2
+  LambdaUtils:
+    Type: "AWS::CloudFormation::Stack"
+    DependsOn: CodeBuildProject
+    Properties:
+      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/CodeBuild.yaml
+      Parameters:
+        CodeBuildProject: !GetAtt CodeBuildProject.Outputs.CodeBuildProject
