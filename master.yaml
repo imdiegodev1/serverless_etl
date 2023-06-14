@@ -1,0 +1,27 @@
+Transform: AWS::Serverless-2016-10-31
+
+Description: "This is a template to create ETL pipeline pattern with AWS Step Functions"
+
+Parameters:
+
+  pS3BucketName:
+    Type: String
+    Description: "S3 bucket"
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9_-]*"
+
+Resources:
+
+  LambdaLayer:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/LambdaLayer.yaml
+
+  RolesAndPolicies:
+    Type: "AWS::CloudFormation::Stack"
+    DependsOn: LambdaLayer
+    Properties:
+      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/rolesAndPolicies.yaml
+      Parameters:
+        LambdaLayerParameter: !GetAtt LambdaLayer.Outputs.LambdaLayerParameter
+        pS3BucketName: !Ref pS3BucketName
+

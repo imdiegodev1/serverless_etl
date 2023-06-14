@@ -1,0 +1,19 @@
+Transform: AWS::Serverless-2016-10-31
+
+Description: "first Layer to deploy codeBuild service"
+
+
+Resources:
+
+  LambdaLayerParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${AWS::StackName}_lambda_layer
+      Type: String
+      Value: "NA"
+
+Outputs:
+  LambdaLayerParameter:
+    Value: !Ref LambdaLayerParameter
+    Export:
+      Name: LambdaLayerParameter
