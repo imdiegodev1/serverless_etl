@@ -10,17 +10,18 @@ Parameters:
     AllowedPattern: "[a-zA-Z][a-zA-Z0-9_-]*"
 
 Resources:
-
+  ##Layer 0
   LambdaLayer:
     Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL: https://code-diego-dsi.s3.amazonaws.com/LambdaLayer.yaml
-
+  
+  ##Layer 1
   RolesAndPolicies:
     Type: "AWS::CloudFormation::Stack"
     DependsOn: LambdaLayer
     Properties:
-      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/rolesAndPolicies.yaml
+      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/CodeBuild.yaml
       Parameters:
         LambdaLayerParameter: !GetAtt LambdaLayer.Outputs.LambdaLayerParameter
         pS3BucketName: !Ref pS3BucketName
