@@ -1,6 +1,6 @@
 Transform: AWS::Serverless-2016-10-31
 
-Description: "Roles for ETL project"
+Description: "Codebuild project definition"
 
 Parameters:
   LambdaLayerParameter:
