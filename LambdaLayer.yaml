@@ -5,6 +5,7 @@ Description: "first Layer to deploy codeBuild service"
 
 Resources:
 
+  #Lambda General Layer
   LambdaLayerParameter:
     Type: AWS::SSM::Parameter
     Properties:

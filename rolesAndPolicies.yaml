@@ -68,78 +68,6 @@ Resources:
               - "s3:Delete*"
             Resource: !Sub "arn:aws:s3:::${pS3BucketName}/*"
 
-  ManagedPolicyforlambda:
-    Type: "AWS::IAM::ManagedPolicy"
-    Properties:
-      Description: "This is sample CFN template"
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Sid: "codebuild"
-            Effect: "Allow"
-            Action:
-              - "codebuild:StartBuild"
-              - "codebuild:BatchGet*"
-              - "codebuild:List*"
-            Resource: !GetAtt  CodeBuildProject.Arn
-          - Sid: "dynamodbaccess"
-            Effect: "Allow"
-            Action:
-              - "dynamodb:Scan"
-              - "dynamodb:GetItem"
-              - "dynamodb:PutItem"
-              - "dynamodb:UpdateItem"
-              - "dynamodb:DeleteItem"
-            Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/my-table"
-          - Sid: "SNStopicaccess"
-            Effect: "Allow"
-            Action: "sns:Publish"
-            Resource: !Ref  SNSTopic
-          - Sid: "glueaccess"
-            Effect: "Allow"
-            Action: "glue:*"
-            Resource:
-                - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:database/${GlueDB}"
-                - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:crawler/${CrawlPartitionedFile}"
-                - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDB}/*"
-                - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-
-#  ManagedPolicyforstepfunction:
-#    Type: "AWS::IAM::ManagedPolicy"
-#    Properties:
-#      Description: "This is sample CFN template"
-#      PolicyDocument:
-#        Version: "2012-10-17"
-#        Statement:
-#          - Sid: "s3listaccess"
-#            Effect: "Allow"
-#            Action: "lambda:InvokeFunction"
-#            Resource:
-#              - !GetAtt  StartETLFunction.Arn
-#              - !GetAtt  StartCrawlerFunction.Arn
-#              - !GetAtt  CrawlerStatusCheckFunction.Arn
-#              - !GetAtt  RetrieveItemsFunction.Arn
-#          - Sid: "glueaccess"
-#            Effect: "Allow"
-#            Action:
-#              - "glue:StartJobRun"
-#              - "glue:GetJobRun"
-#              - "glue:GetJobRuns"
-#              - "glue:BatchStopJobRun"
-#            Resource: "*"
-#          - Sid: "xrayaccess"
-#            Effect: "Allow"
-#            Action:
-#              -  "xray:PutTraceSegments"
-#              -  "xray:PutTelemetryRecords"
-#              -  "xray:GetSamplingRules"
-#              -  "xray:GetSamplingTargets"
-#            Resource: "*"
-#          - Sid: snsaccess
-#            Effect: Allow
-#            Action:
-#              - sns:*
-#            Resource: '*'
 
   ##Roles
 
@@ -173,37 +101,6 @@ Resources:
       ManagedPolicyArns:
           - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
           - !Ref BasicManagedPolicyforlambda
-
-  LambdaRole:
-    Type: "AWS::IAM::Role"
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: "Allow"
-            Principal:
-              Service:
-                - "lambda.amazonaws.com"
-            Action:
-              - "sts:AssumeRole"
-      ManagedPolicyArns:
-          - !Ref ManagedPolicyforlambda
-          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
-#  StepFunctionRole:
-#    Type: "AWS::IAM::Role"
-#    Properties:
-#      AssumeRolePolicyDocument:
-#        Version: "2012-10-17"
-#        Statement:
-#          - Effect: "Allow"
-#            Principal:
-#              Service:
-#                - "states.amazonaws.com"
-#            Action:
-#              - "sts:AssumeRole"
-#      ManagedPolicyArns:
-#          - !Ref ManagedPolicyforstepfunction
 
   GlueRole:
     Type: AWS::IAM::Role
@@ -254,3 +151,31 @@ Resources:
                 Resource:
                     - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws-glue/*"
   
+Outputs:
+#Export Policies
+  BasicManagedPolicyforCodeBuild:
+    Value: !Ref BasicManagedPolicyforCodeBuild
+    Export:
+      Name: BasicManagedPolicyforCodeBuild
+
+  BasicManagedPolicyforlambda:
+    Value: !Ref BasicManagedPolicyforlambda
+    Export:
+      Name: BasicManagedPolicyforlambda
+
+#ExportRoles
+
+  CodeBuildRole:
+    Value: !Ref CodeBuildRole
+    Export:
+      Name: CodeBuildRole
+
+  BasicLambdaRole:
+    Value: !Ref BasicLambdaRole
+    Export:
+      Name: BasicLambdaRole
+
+  GlueRole:
+    Value: !Ref GlueRole
+    Export:
+      Name: GlueRole
