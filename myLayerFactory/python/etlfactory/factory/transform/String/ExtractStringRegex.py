@@ -1,21 +1,21 @@
 from etlfactory.factory.transform.abs_transform import AbsTransform
+import re
+import pandas as pd
 import boto3
 import time
 
-class LowercaseStringColumns(AbsTransform):
+class ExtractStringRegex(AbsTransform):
 
     def execute(self, dfs: dict, table, parameters):
-        """
-        Removes leading and trailing spaces in the strings
-        """
-        df = dfs[table]
-        columns = parameters['column_lst']
-        try:
-            for column in columns:
-                df[column] = df[column].str.lower()
 
+        df = dfs[table]
+        pattern = parameters['pattern']
+        column = parameters['column_to_process']
+
+        try:
+            df[column] = df[column].str.extract(pattern)
             return df
-        
+
         except Exception as e:
 
             session = boto3.Session()
@@ -29,10 +29,9 @@ class LowercaseStringColumns(AbsTransform):
                 logEvents=[
                     {
                         'timestamp': int(round(time.time()*1000)),
-                        'message': (f"An error occurred while trying to apply query to the data frame {e}")
+                        'message': (f"Unable to extract string with regex pattern {e}")
                     }
                 ]
             )
 
-            raise Exception(f"An error occurred while trying to apply query to the data frame {e}")
-
+            raise Exception(f"Unable to extract string with regex pattern {e}")

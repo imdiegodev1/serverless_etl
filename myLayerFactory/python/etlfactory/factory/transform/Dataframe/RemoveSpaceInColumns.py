@@ -1,35 +1,38 @@
 from etlfactory.factory.transform.abs_transform import AbsTransform
+import pandas as pd
 import boto3
 import time
 
-class OrderDataframeColumns(AbsTransform):
+class RemoveSpaceInColumns(AbsTransform):
 
     def execute(self, dfs: dict, table, parameters):
 
-        try:
-            df = dfs[table]
+        df = dfs[table]
 
-            df = df[parameters['columns']]
+        try:
+            df.columns = df.columns.str.replace(' ', '_')
+
+            return df
 
         except Exception as e:
 
             session = boto3.Session()
             client = session.client('logs')
 
-            STREAM_NAME = "Transform"
+            log_message = str(e)
 
             log_response = client.put_log_events(
-                logGroupName="DSI-Pipelines",
-                logStreamName=STREAM_NAME,
+                logGroupName=self.log_group,
+                logStreamName=self.log_stream,
                 logEvents=[
                     {
                         'timestamp': int(round(time.time()*1000)),
-                        'error message': (f"An error occurred while trying to order columns data frame {e}")
+                        'message': (f"Unable to lowercase string {e}")
                     }
                 ]
             )
             
-            raise Exception(f"An error occurred while trying to order columns data frame {e}")
+            raise Exception(f"Unable to lowercase string {e}")
 
 
-        return df
+        

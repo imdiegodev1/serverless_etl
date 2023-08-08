@@ -1,4 +1,4 @@
-from ..abs_transform import AbsTransform
+from etlfactory.factory.transform.abs_transform import AbsTransform
 
 class ValidateBooleanColumns(AbsTransform):
     def __init__(self, config, data):

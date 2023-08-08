@@ -3,6 +3,7 @@ from etlfactory.factory.abs_factory import AbsFactory
 from etlfactory.factory.loader import loader
 from etlfactory.factory.transform.abs_transform import AbsTransform
 from etlfactory.factory.extract.abs_extract import AbsExtract
+from etlfactory.factory.load.abs_load import AbsLoad
 
 class ETL_Factory(AbsFactory):
     def __init__(self, config) -> None:
@@ -18,6 +19,9 @@ class ETL_Factory(AbsFactory):
         for file in self.config["Extract"].keys():
             print("#####################################")
             print("Extracting File:", file)
+            # if file not in self.data['RawData'] and file in self.config["Extract"].keys() :
+            #         print(file)
+            #         continue
             for method in self.config["Extract"][file].keys():
 
                 path = self.config["Extract"][file][method]['path']
@@ -45,7 +49,20 @@ class ETL_Factory(AbsFactory):
 
         print(self.data)
 
-    def load_method(self, config):
-        for _class, path in config["load"]:
-            factory_load = loader.load_factory(_class, path)
-            factory_load.execute()
+    def load_method(self):
+
+        # Load
+        for method in self.config["Load"].keys():
+            
+            path = self.config["Load"][method]['path']
+            data_to_send = self.config["Load"][method]['data_to_send']
+            module = loader.loader(
+                name = method, 
+                package = path, 
+                abstract = AbsLoad
+            )
+
+            return module.load(
+                data = self.data,
+                data_to_send = data_to_send
+            )

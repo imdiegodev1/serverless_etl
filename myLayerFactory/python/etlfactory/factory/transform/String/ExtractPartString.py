@@ -2,20 +2,22 @@ from etlfactory.factory.transform.abs_transform import AbsTransform
 import boto3
 import time
 
-class LowercaseStringColumns(AbsTransform):
+class ExtractPartString(AbsTransform):
 
     def execute(self, dfs: dict, table, parameters):
-        """
-        Removes leading and trailing spaces in the strings
-        """
-        df = dfs[table]
-        columns = parameters['column_lst']
-        try:
-            for column in columns:
-                df[column] = df[column].str.lower()
 
-            return df
-        
+        df = dfs[table]
+        string_origin = parameters['string_origin']
+        string_from = parameters['string_from']
+        string_until = parameters['string_until']
+        new_column = parameters['new_column']
+
+        print(type(string_from))
+        print(type(string_until))
+
+        try:
+            df[new_column] = df[string_origin].str.slice(string_from, string_until)
+
         except Exception as e:
 
             session = boto3.Session()
@@ -29,10 +31,11 @@ class LowercaseStringColumns(AbsTransform):
                 logEvents=[
                     {
                         'timestamp': int(round(time.time()*1000)),
-                        'message': (f"An error occurred while trying to apply query to the data frame {e}")
+                        'message': (f"Unable to lowercase string {e}")
                     }
                 ]
             )
 
-            raise Exception(f"An error occurred while trying to apply query to the data frame {e}")
+            raise Exception(f"Unable to lowercase string {e}")
 
+        return df

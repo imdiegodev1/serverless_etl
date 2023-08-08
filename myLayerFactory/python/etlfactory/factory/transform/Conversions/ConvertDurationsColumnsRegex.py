@@ -1,4 +1,4 @@
-from ..abs_transform import AbsTransform
+from etlfactory.factory.transform.abs_transform import AbsTransform
 import numpy as np
 
 class ValidateConvertDurationColumnsRegex(AbsTransform):

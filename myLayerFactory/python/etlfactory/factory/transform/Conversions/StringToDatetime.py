@@ -1,19 +1,15 @@
 from etlfactory.factory.transform.abs_transform import AbsTransform
+import pandas as pd
 import boto3
 import time
 
-class LowercaseStringColumns(AbsTransform):
+class StringToDatetime(AbsTransform):
 
     def execute(self, dfs: dict, table, parameters):
-        """
-        Removes leading and trailing spaces in the strings
-        """
         df = dfs[table]
-        columns = parameters['column_lst']
+        column = parameters['column']
         try:
-            for column in columns:
-                df[column] = df[column].str.lower()
-
+            df[column] = pd.to_datetime(df[column])
             return df
         
         except Exception as e:
@@ -29,10 +25,9 @@ class LowercaseStringColumns(AbsTransform):
                 logEvents=[
                     {
                         'timestamp': int(round(time.time()*1000)),
-                        'message': (f"An error occurred while trying to apply query to the data frame {e}")
+                        'message': (f"An error occurred while trying convert string to datetime data type {e}")
                     }
                 ]
             )
 
-            raise Exception(f"An error occurred while trying to apply query to the data frame {e}")
-
+            raise Exception(f"An error occurred while trying convert string to datetime data type {e}")
