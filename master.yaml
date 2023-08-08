@@ -31,6 +31,6 @@ Resources:
     Type: "AWS::CloudFormation::Stack"
     DependsOn: CodeBuildProject
     Properties:
-      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/CodeBuild.yaml
+      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/LambdaUtils.yaml
       Parameters:
         CodeBuildProject: !GetAtt CodeBuildProject.Outputs.CodeBuildProject
