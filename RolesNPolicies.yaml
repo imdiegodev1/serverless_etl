@@ -1,0 +1,348 @@
+Transform: AWS::Serverless-2016-10-31
+
+Description: "Template to create roles and policies needed"
+
+Resources:
+
+  #Coudebuild
+  CodeBuildRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "codebuild.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+          - !Ref BasicManagedPolicyforCodeBuild
+
+  BasicManagedPolicyforCodeBuild:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      Description: "This is sample CFN template"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "lambdalayeraccess"
+            Effect: "Allow"
+            Action:
+              -  "lambda:Publish*"
+              -  "lambda:List*"
+            Resource:
+              - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:${AWS::StackName}-pandas-layer"
+              - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:${AWS::StackName}-auxiliar-layer"
+
+          - Sid: "logaccess"
+            Effect: "Allow"
+            Action:
+              -  logs:CreateLogGroup
+              -  logs:CreateLogStream
+              -  logs:PutLogEvents
+            Resource: "*"
+          - Sid: "SSMPutparamater"
+            Effect: "Allow"
+            Action:
+              - ssm:PutParameter
+            Resource:
+              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${LambdaLayerParameter}"
+              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${LambdaLayerParameterAuxiliar}"
+
+  #Lambda
+  BasicLambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+          - !Ref BasicManagedPolicyforlambda
+
+  BasicManagedPolicyforlambda:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      Description: "This is sample CFN template"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "stepfunction"
+            Effect: "Allow"
+            Action: "states:*"
+            Resource: !Sub ${MyStepFunction}
+          - Sid: "s3listaccess"
+            Effect: "Allow"
+            Action:
+              - "s3:List*"
+            Resource: !Sub "arn:aws:s3:::${pS3BucketName}"
+          - Sid: "s3putaccess"
+            Effect: "Allow"
+            Action:
+              - "s3:Get*"
+              - "s3:Put*"
+              - "s3:Delete*"
+            Resource: !Sub "arn:aws:s3:::${pS3BucketName}/*"
+          - Sid: "sqsaccess"
+            Effect: "Allow"
+            Action:
+              - "sqs:ReceiveMessage"
+              - "sqs:SendMessage"
+              - "sqs:DeleteMessage"
+              - "sqs:GetQueueAttributes"
+            Resource:
+              - !GetAtt SecondSqsQueue.Arn
+          - Sid: "smaccess"
+            Effect: "Allow"
+            Action:
+              - "secretsmanager:GetSecretValue"
+            Resource:
+              - "*"
+          - Sid: "lambdainvoke"
+            Effect: "Allow"
+            Action:
+              - "lambda:InvokeFunction"
+            Resource:
+              - !GetAtt GetDataBaseFiles.Arn
+
+  LambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+          - !Ref ManagedPolicyforlambda
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  ManagedPolicyforlambda:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      Description: "This is sample CFN template"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "codebuild"
+            Effect: "Allow"
+            Action:
+              - "codebuild:StartBuild"
+              - "codebuild:BatchGet*"
+              - "codebuild:List*"
+            Resource:
+              - !GetAtt CodeBuildProject.Arn
+              - !GetAtt CodeBuildProjectAuxiliar.Arn
+          - Sid: "s3putaccess"
+            Effect: "Allow"
+            Action:
+              - "s3:Get*"
+              - "s3:Put*"
+              - "s3:Delete*"
+            Resource: !Sub "arn:aws:s3:::${pS3BucketName}/*"
+          - Sid: "dynamodbaccess"
+            Effect: "Allow"
+            Action:
+              - "dynamodb:Scan"
+              - "dynamodb:GetItem"
+              - "dynamodb:PutItem"
+              - "dynamodb:UpdateItem"
+              - "dynamodb:DeleteItem"
+            Resource:
+              - "*"
+          - Sid: "SNStopicaccess"
+            Effect: "Allow"
+            Action: "sns:Publish"
+            Resource: !Ref  SNSTopic
+          - Sid: "glueaccess"
+            Effect: "Allow"
+            Action: "glue:*"
+            Resource:
+                - "*"
+          - Sid: "sqsaccess"
+            Effect: "Allow"
+            Action:
+              - "sqs:ReceiveMessage"
+              - "sqs:SendMessage"
+              - "sqs:DeleteMessage"
+              - "sqs:GetQueueAttributes"
+            Resource:
+              - !GetAtt FirstSqsQueue.Arn
+              - !GetAtt SecondSqsQueue.Arn
+          - Sid: "ec2access"
+            Effect: "Allow"
+            Action:
+              - "ec2:DescribeNetworkInterfaces"
+              - "ec2:CreateNetworkInterface"
+              - "ec2:DeleteNetworkInterface"
+              - "ec2:DescribeInstances"
+              - "ec2:AttachNetworkInterface"
+            Resource:
+              - "*"
+          - Sid: "iamaccess"
+            Effect: "Allow"
+            Action:
+              - "iam:PassRole"
+            Resource:
+              - "*"
+          - Sid: "smaccess"
+            Effect: "Allow"
+            Action:
+              - "secretsmanager:GetSecretValue"
+            Resource:
+              - "*"
+          - Sid: "lambdainvoke"
+            Effect: "Allow"
+            Action:
+              - "lambda:InvokeFunction"
+              - "lambda:ListLayerVersions"
+              - "lambda:DeleteLayerVersion"
+            Resource:
+              - "*"
+
+  #Stepfunction
+  StepFunctionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "states.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+          - !Ref ManagedPolicyforstepfunction
+
+  ManagedPolicyforstepfunction:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      Description: "This is sample CFN template"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "s3listaccess"
+            Effect: "Allow"
+            Action: "lambda:InvokeFunction"
+            Resource:
+              - "*"
+          - Sid: "glueaccess"
+            Effect: "Allow"
+            Action:
+              - "glue:StartJobRun"
+              - "glue:GetJobRun"
+              - "glue:GetJobRuns"
+              - "glue:BatchStopJobRun"
+            Resource: "*"
+          - Sid: "xrayaccess"
+            Effect: "Allow"
+            Action:
+              -  "xray:PutTraceSegments"
+              -  "xray:PutTelemetryRecords"
+              -  "xray:GetSamplingRules"
+              -  "xray:GetSamplingTargets"
+            Resource: "*"
+          - Sid: snsaccess
+            Effect: Allow
+            Action:
+              - sns:*
+            Resource: '*'
+  
+  #Queue
+  MyDLQQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref MyDeadLetterQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Action:
+              - sns:Publish
+              - sns.Subscribe
+              - sns:SendMessage
+              - sqs:GetQueueAttributes
+              - sqs:ListDeadLetterSourceQueues
+              - cloudwatch:PutMetricData
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:GenerateDataKey
+            Resource: '*'
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+              - sqs:ListDeadLetterSourceQueues
+              - cloudwatch:PutMetricData
+              - kms:Encrypt
+              - kms:Decrypt
+            Resource:
+              - !GetAtt MyDeadLetterQueue.Arn
+              - !GetAtt MyCloudWatchAlarm.Arn
+
+  #Glue
+  GlueRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: "s3listaccess"
+                Effect: "Allow"
+                Action:
+                  - "s3:List*"
+                Resource: !Sub "arn:aws:s3:::${pS3BucketName}"
+              - Sid: "s3putaccess"
+                Effect: "Allow"
+                Action:
+                  - "s3:Get*"
+                  - "s3:Put*"
+                  - "s3:Delete*"
+                Resource: !Sub "arn:aws:s3:::${pS3BucketName}/*"
+              - Sid: "glue"
+                Effect: "Allow"
+                Action: "glue:*"
+                Resource:
+                    - "*"
+              - Sid: "glueTables"
+                Effect: "Allow"
+                Action: "glue:CreateTable"
+                Resource:
+                  - "*"
+              - Sid: "cwlog"
+                Effect: "Allow"
+                Action: "logs:*"
+                Resource:
+                    - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws-glue/*"

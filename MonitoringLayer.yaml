@@ -1,0 +1,82 @@
+Transform: AWS::Serverless-2016-10-31
+
+Description: "Template to create observability resources"
+
+Parameteres:
+  DynamoFormatMetadataName:
+    Description: "Dynamo metadata table name to store data formats of data extraction pipelines"
+    Type: String
+
+  DynamoFormatMetadataKey:
+    Description: "Dynamo metadata table key name to store data formats of data extraction pipelines"
+    Type: String
+
+  PipelineLogGroupName:
+    Type: String
+
+  ExtractLogStreamName:
+    Type: String
+
+  TransformLogStreamName:
+    Type: String
+
+  LoadLogStreamName:
+    Type: String
+
+  ResultLogStreamName:
+    Type: String
+  
+Resources:
+
+  ##Metadata to check extraction - resources
+
+  DynamoFormatMetadata:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref DynamoFormatMetadataName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: !Ref DynamoFormatMetadataKey
+        AttributeType: S
+
+      KeySchema:
+      - AttributeName: !Ref DynamoFormatMetadataKey
+        KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+
+##Monitoring services cloudwatch
+
+  PipelineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref PipelineLogGroupName
+      RetentionInDays: 30
+
+  ExtractLogStream:
+    Type: AWS::Logs::LogStream
+    DependsOn: PipelineLogGroup
+    Properties:
+      LogGroupName: !Ref PipelineLogGroupName
+      LogStreamName: !Ref ExtractLogStreamName
+
+  TransformLogStream:
+    Type: AWS::Logs::LogStream
+    DependsOn: PipelineLogGroup
+    Properties:
+      LogGroupName: !Ref PipelineLogGroupName
+      LogStreamName: !Ref TransformLogStreamName
+
+  LoadLogStream:
+    Type: AWS::Logs::LogStream
+    DependsOn: PipelineLogGroup
+    Properties:
+      LogGroupName: !Ref PipelineLogGroupName
+      LogStreamName: !Ref LoadLogStreamName
+
+  ResultLogStream:
+    Type: AWS::Logs::LogStream
+    DependsOn: PipelineLogGroup
+    Properties:
+      LogGroupName: !Ref PipelineLogGroupName
+      LogStreamName: !Ref ResultLogStreamName

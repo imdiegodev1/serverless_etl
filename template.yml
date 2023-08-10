@@ -18,15 +18,38 @@ Parameters:
     Description: "Valid email address to send success or error notification"
     Type: String
 
+  DynamoFormatMetadataName:
+    Description: "Dynamo metadata table name to store data formats of data extraction pipelines"
+    Type: String
+
+  DynamoFormatMetadataKey:
+    Description: "Dynamo metadata table key name to store data formats of data extraction pipelines"
+    Type: String
+
+  PipelineLogGroupName:
+    Type: String
+
+  ExtractLogStreamName:
+    Type: String
+
+  TransformLogStreamName:
+    Type: String
+
+  LoadLogStreamName:
+    Type: String
+
+  ResultLogStreamName:
+    Type: String
+
 Resources:
-  ##Done
+
   LambdaLayerParameter:
     Type: AWS::SSM::Parameter
     Properties:
       Name: !Sub ${AWS::StackName}_lambda_layer
       Type: String
       Value: "NA"
-  ##Done
+
   StartCodeBuildProject:
     Type: Custom::StartCodeBuildProject
     Properties:
@@ -34,7 +57,8 @@ Resources:
       Update_lambda_layer: "yes"
     DependsOn:
       - "LambdaLayerParameter"
-  ##Done
+
+
   CodeBuildRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -49,7 +73,7 @@ Resources:
               - "sts:AssumeRole"
       ManagedPolicyArns:
           - !Ref BasicManagedPolicyforCodeBuild
-  ##Done
+
   BasicManagedPolicyforCodeBuild:
     Type: "AWS::IAM::ManagedPolicy"
     Properties:
@@ -77,7 +101,8 @@ Resources:
             Action:
               - ssm:PutParameter
             Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${LambdaLayerParameter}"
-  ##Done
+
+
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -135,6 +160,7 @@ Resources:
 
       TimeoutInMinutes: 30
 
+
   BasicLambdaRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -176,7 +202,17 @@ Resources:
               - "s3:Put*"
               - "s3:Delete*"
             Resource: !Sub "arn:aws:s3:::${pS3BucketName}/*"
-  ##Done
+          - Sid: "sqsaccess"
+            Effect: "Allow"
+            Action:
+              - "sqs:ReceiveMessage"
+              - "sqs:SendMessage"
+              - "sqs:DeleteMessage"
+              - "sqs:GetQueueAttributes"
+            Resource:
+              - !GetAtt SecondSqsQueue.Arn
+
+
   LambdaRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -192,7 +228,7 @@ Resources:
       ManagedPolicyArns:
           - !Ref ManagedPolicyforlambda
           - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-  ##Done
+
   ManagedPolicyforlambda:
     Type: "AWS::IAM::ManagedPolicy"
     Properties:
@@ -228,12 +264,31 @@ Resources:
                 - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:crawler/${CrawlPartitionedFile}"
                 - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:table/${GlueDB}/*"
                 - !Sub "arn:aws:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-
+          - Sid: "sqsaccess"
+            Effect: "Allow"
+            Action:
+              - "sqs:ReceiveMessage"
+              - "sqs:SendMessage"
+              - "sqs:DeleteMessage"
+              - "sqs:GetQueueAttributes"
+            Resource:
+              - !GetAtt FirstSqsQueue.Arn
+              - !GetAtt SecondSqsQueue.Arn
+          - Sid: "ec2access"
+            Effect: "Allow"
+            Action:
+              - "ec2:DescribeNetworkInterfaces"
+              - "ec2:CreateNetworkInterface"
+              - "ec2:DeleteNetworkInterface"
+              - "ec2:DescribeInstances"
+              - "ec2:AttachNetworkInterface"
+            Resource:
+              - "*"
 
   StartCodeBuildProjectFunction:
     Type: AWS::Serverless::Function
+    Description: "Start Code Build project by lambda function"
     Properties:
-      Description: "Start Code Build project by lambda function"
       Layers:
          - !Ref LambdaLayerCfn
       Role: !GetAtt LambdaRole.Arn
@@ -245,12 +300,30 @@ Resources:
         Variables:
           PROJECT_NAME: !Ref CodeBuildProject
 
+
+  StartStepFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Role: !GetAtt BasicLambdaRole.Arn
+      Handler: start_step_function.lambda_handler
+      CodeUri: lambda/utils
+      Runtime: python3.10
+      Timeout: 30
+      Environment:
+        Variables:
+          STEP_FUNC_ARN: !Ref MyStepFunction
+      Events:
+        SecondSqsEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SecondSqsQueue.Arn
+
   StartETLFunction:
     Type: AWS::Serverless::Function
+    Description: "Start ETL project by lambda function"
     DependsOn:
       - "StartCodeBuildProject"
     Properties:
-      Description: "Start ETL project by lambda function"
       Layers:
          - !GetAtt LambdaLayerParameter.Value
          - !Ref LambdaLayerFactory
@@ -292,7 +365,13 @@ Resources:
       Timeout: 30
       Environment:
         Variables:
+          SECOND_SQS_QUEUE_URL: !Ref SecondSqsQueue
           RETRYLIMIT: 200
+      Events:
+        FirstSqsEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt FirstSqsQueue.Arn
 
   LambdaLayerCfn:
       Type: AWS::Serverless::LayerVersion
@@ -328,19 +407,6 @@ Resources:
               - "sts:AssumeRole"
       ManagedPolicyArns:
           - !Ref ManagedPolicyforstepfunction
-
-  StartStepFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Role: !GetAtt BasicLambdaRole.Arn
-      Handler: start_step_function.lambda_handler
-      CodeUri: lambda/utils
-      Runtime: python3.10
-      Timeout: 60
-      Environment:
-        Variables:
-          STEP_FUNC_ARN: !Ref MyStepFunction
-
 
   ManagedPolicyforstepfunction:
     Type: "AWS::IAM::ManagedPolicy"
@@ -379,199 +445,299 @@ Resources:
               - sns:*
             Resource: '*'
 
+  FirstSqsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt MyDeadLetterQueue.Arn
+        maxReceiveCount: 5
 
-#  MyStepFunction:
-#    Type: AWS::StepFunctions::StateMachine
-#    Properties:
-#      TracingConfiguration:
-#        Enabled: true
-#      RoleArn: !GetAtt StepFunctionRole.Arn
-#      DefinitionString: !Sub |
-#        {
-#          "Comment": "A HELLO World example of the Amazon States Language using Pass states...",
-#          "StartAt": "Process Clients",
-#          "States": {
-#            "Process Clients": {
-#              "Type": "Task",
-#              "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${RetrieveItemsFunction}",
-#              "ResultPath": "$.clientList",
-#              "Next": "Parallel Processing"
-#            },
-#            "Parallel Processing": {
-#              "Type": "Map",
-#              "ItemsPath": "$.clientList.clientList",
-#              "ResultPath": "$.parallelResults",
-#              "MaxConcurrency": 10,
-#              "Iterator": {
-#                  "StartAt": "Start ETL Job",
-#                  "States": {
-#                      "Start ETL Job": {
-#                        "Type": "Task",
-#                        "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${StartETLFunction}",
-#                        "Next": "ETL Job Success?",
-#                        "ResultPath": "$.taskresult",
-#                        "Catch": [
-#                          {
-#                            "ErrorEquals": [
-#                              "States.ALL"
-#                            ],
-#                            "ResultPath": "$.error",
-#                            "Next": "Handle Failure"
-#                          }
-#                        ]
-#                      },
-#                      "ETL Job Success?": {
-#                        "Type": "Choice",
-#                        "Choices": [
-#                          {
-#                            "Variable": "$.taskresult.Validation",
-#                            "StringEquals": "SUCCESS",
-#                            "Next": "Start Crawler For File"
-#                          },
-#                          {
-#                            "Variable": "$.taskresult.Validation",
-#                            "StringEquals": "FAILURE",
-#                            "Next": "Handle Failure"
-#                          }
-#                        ]
-#                      },
-#                      "Handle Failure": {
-#                        "Type": "Pass",
-#                        "Parameters": {
-#                          "StateMachineName.$": "$$.StateMachine.Name",
-#                          "ExecutionName.$": "$$.Execution.Name",
-#                          "ExecutionTime.$": "$$.Execution.StartTime",
-#                          "ErrorMessage": "An error ocurred in the ETL Job",
-#                          "FailedTaskName.$": "$$.State.Name"
-#                        },
-#                        "ResultPath": "$.taskresult",
-#                        "Next": "Error Notification"
-#                      },
-#                      "Error Notification": {
-#                        "Type": "Task",
-#                        "Resource": "arn:aws:states:::aws-sdk:sns:publish",
-#                        "Parameters": {
-#                          "Message.$": "States.Format('Error: {}, StateMachine:{}, Name: {}, Time: {}, Task: {}', $.taskresult.ErrorMessage, $.taskresult.StateMachineName, $.taskresult.ExecutionName, $.taskresult.ExecutionTime ,$.taskresult.FailedTaskName)",
-#                          "TopicArn": "${SNSTopic}"
-#                        },
-#                        "Next": "Fail"
-#                      },
-#                      "Start Crawler For File": {
-#                        "Type": "Task",
-#                        "ResultPath": "$.taskresult",
-#                        "ResultSelector": {
-#                          "cnt": "0",
-#                          "crawler_name": "${CrawlPartitionedFile}"
-#                        },
-#                        "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${StartCrawlerFunction}",
-#                        "Parameters": {
-#                          "Crawler_Name": "${CrawlPartitionedFile}"
-#                        },
-#                        "Retry": [
-#                          {
-#                            "ErrorEquals": [
-#                              "CrawlerRunningException"
-#                            ],
-#                            "IntervalSeconds": 10,
-#                            "MaxAttempts": 10,
-#                            "BackoffRate": 2
-#                          }
-#                        ],
-#                        "Catch": [
-#                          {
-#                            "ErrorEquals": [
-#                              "CrawlerRunningException"
-#                            ],
-#                            "Comment": "Crawler is running for long time",
-#                            "Next": "Handle Failure"
-#                          },
-#                          {
-#                            "ErrorEquals": [
-#                              "States.ALL"
-#                            ],
-#                            "Comment": "Error fall back",
-#                            "ResultPath": "$.error-info",
-#                            "Next": "Handle Failure"
-#                          }
-#                        ],
-#                        "Next": "Crawler Status Check"
-#                      },
-#                      "Crawler Status Check": {
-#                        "Type": "Task",
-#                        "InputPath": "$.taskresult",
-#                        "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${CrawlerStatusCheckFunction}",
-#                        "Next": "File Crawler Finished?",
-#                        "ResultPath": "$.taskresult"
-#                      },
-#                      "File Crawler Finished?": {
-#                        "Type": "Choice",
-#                        "Choices": [
-#                          {
-#                            "Or": [
-#                              {
-#                                "Variable": "$.taskresult.Status",
-#                                "StringEquals": "STOPPING"
-#                              },
-#                              {
-#                                "Variable": "$.taskresult.Status",
-#                                "StringEquals": "RUNNING"
-#                              }
-#                            ],
-#                            "Next": "Raw File Crawler Wait"
-#                          },
-#                          {
-#                            "Variable": "$.taskresult.Status",
-#                            "StringEquals": "READY",
-#                            "Next": "Handle Success"
-#                          },
-#                          {
-#                            "Variable": "$.taskresult.Status",
-#                            "StringEquals": "RETRYLIMITREACH",
-#                            "Next": "Handle Failure"
-#                          },
-#                          {
-#                            "Variable": "$.taskresult.Status",
-#                            "StringEquals": "FAILED",
-#                            "Next": "Handle Failure"
-#                          }
-#                        ],
-#                        "Default": "Handle Failure"
-#                      },
-#                      "Raw File Crawler Wait": {
-#                        "Type": "Wait",
-#                        "Seconds": 30,
-#                        "Next": "Crawler Status Check"
-#                      },
-#                      "Fail": {
-#                        "Type": "Fail",
-#                        "Cause": "validation failed",
-#                        "Error": "ValidationError"
-#                      },
-#                      "Handle Success": {
-#                        "Type": "Pass",
-#                        "Parameters": {
-#                          "StateMachineName.$": "$$.StateMachine.Name",
-#                          "ExecutionName.$": "$$.Execution.Name",
-#                          "ExecutionTime.$": "$$.Execution.StartTime"
-#                        },
-#                        "ResultPath": "$.taskresult",
-#                        "Next": "Success Notification"
-#                      },
-#                      "Success Notification": {
-#                          "Type": "Task",
-#                          "Resource": "arn:aws:states:::aws-sdk:sns:publish",
-#                          "Parameters": {
-#                            "Message.$": "States.Format('Successful task. StateMachine: {}, Name: {}, Time: {}', $.taskresult.StateMachineName, $.taskresult.ExecutionName, $.taskresult.ExecutionTime)",
-#                            "TopicArn": "${SNSTopic}"
-#                          },
-#                          "End": true
-#                      }
-#                    }
-#                  },
-#                  "End": true
-#                }
-#              }
-#            }
+  SecondSqsQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt MyDeadLetterQueue.Arn
+          maxReceiveCount: 5
+
+  MyDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600  # 14 days
+      DelaySeconds: 60 #for alarms
+
+  MyCloudWatchEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+          - aws.sqs
+        detail-type:
+          - 'Amazon SQS Message'
+        resources:
+          - !GetAtt MyDeadLetterQueue.Arn
+      State: ENABLED
+      Targets:
+        - Arn: !Ref SNSTopic
+          Id: MySnsTarget
+
+  MyCloudWatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm for DLQ message count
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !Select [5, !Split [":", !GetAtt MyDeadLetterQueue.Arn]]
+      Statistic: Sum
+      Period: 300 #seconds
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref SNSTopic
+
+
+  MyDLQQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref MyDeadLetterQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Action:
+              - sns:Publish
+              - sns.Subscribe
+              - sns:SendMessage
+              - sqs:GetQueueAttributes
+              - sqs:ListDeadLetterSourceQueues
+              - cloudwatch:PutMetricData
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:GenerateDataKey
+            Resource: '*'
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+              - sqs:ListDeadLetterSourceQueues
+              - cloudwatch:PutMetricData
+              - kms:Encrypt
+              - kms:Decrypt
+            Resource:
+              - !GetAtt MyDeadLetterQueue.Arn
+              - !GetAtt MyCloudWatchAlarm.Arn
+
+  # Define the event rule to filter for events
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "EventRule"
+      ScheduleExpression: rate(1 minute)
+      EventPattern:
+        account:
+          - !Sub '${AWS::AccountId}'
+        source:
+          - "demo.sqs"
+      Targets:
+        - Arn: !GetAtt FirstSqsQueue.Arn
+          Id: "SQSqueue"
+
+
+  # Allow EventBridge to invoke SQS
+  EventBridgeToToSqsPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: SQS:SendMessage
+          Resource:  !GetAtt FirstSqsQueue.Arn
+      Queues:
+        - Ref: FirstSqsQueue
+
+  MyStepFunction:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      TracingConfiguration:
+        Enabled: true
+      RoleArn: !GetAtt StepFunctionRole.Arn
+      DefinitionString: !Sub |
+        {
+          "Comment": "A HELLO World example of the Amazon States Language using Pass states...",
+          "StartAt": "Start ETL Job",
+          "States": {
+          "Start ETL Job": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${StartETLFunction}",
+            "Next": "ETL Job Success?",
+            "ResultPath": "$.taskresult",
+            "Catch": [
+              {
+                "ErrorEquals": [
+                  "States.ALL"
+                ],
+                "ResultPath": "$.error",
+                "Next": "Handle Failure"
+              }
+            ]
+          },
+          "ETL Job Success?": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Variable": "$.taskresult.Validation",
+                "StringEquals": "SUCCESS",
+                "Next": "Start Crawler For File"
+              },
+              {
+                "Variable": "$.taskresult.Validation",
+                "StringEquals": "FAILURE",
+                "Next": "Handle Failure"
+              }
+            ]
+          },
+          "Handle Failure": {
+            "Type": "Pass",
+            "Parameters": {
+              "StateMachineName.$": "$$.StateMachine.Name",
+              "ExecutionName.$": "$$.Execution.Name",
+              "ExecutionTime.$": "$$.Execution.StartTime",
+              "ErrorMessage": "An error occurred in the ETL Job",
+              "FailedTaskName.$": "$$.State.Name"
+            },
+            "ResultPath": "$.taskresult",
+            "Next": "Error Notification"
+          },
+          "Error Notification": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::aws-sdk:sns:publish",
+            "Parameters": {
+              "Message.$": "States.Format('Error: {}, StateMachine:{}, Name: {}, Time: {}, Task: {}', $.taskresult.ErrorMessage, $.taskresult.StateMachineName, $.taskresult.ExecutionName, $.taskresult.ExecutionTime ,$.taskresult.FailedTaskName)",
+              "TopicArn": "${SNSTopic}"
+            },
+            "Next": "Fail"
+          },
+          "Start Crawler For File": {
+            "Type": "Task",
+            "ResultPath": "$.taskresult",
+            "ResultSelector": {
+              "cnt": "0",
+              "crawler_name": "${CrawlPartitionedFile}"
+            },
+            "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${StartCrawlerFunction}",
+            "Parameters": {
+              "Crawler_Name": "${CrawlPartitionedFile}"
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "CrawlerRunningException"
+                ],
+                "IntervalSeconds": 10,
+                "MaxAttempts": 10,
+                "BackoffRate": 2
+              }
+            ],
+            "Catch": [
+              {
+                "ErrorEquals": [
+                  "CrawlerRunningException"
+                ],
+                "Comment": "Crawler is running for a long time",
+                "Next": "Handle Failure"
+              },
+              {
+                "ErrorEquals": [
+                  "States.ALL"
+                ],
+                "Comment": "Error fallback",
+                "ResultPath": "$.error-info",
+                "Next": "Handle Failure"
+              }
+            ],
+            "Next": "Crawler Status Check"
+          },
+          "Crawler Status Check": {
+            "Type": "Task",
+            "InputPath": "$.taskresult",
+            "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${CrawlerStatusCheckFunction}",
+            "Next": "File Crawler Finished?",
+            "ResultPath": "$.taskresult"
+          },
+          "File Crawler Finished?": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Or": [
+                  {
+                    "Variable": "$.taskresult.Status",
+                    "StringEquals": "STOPPING"
+                  },
+                  {
+                    "Variable": "$.taskresult.Status",
+                    "StringEquals": "RUNNING"
+                  }
+                ],
+                "Next": "Raw File Crawler Wait"
+              },
+              {
+                "Variable": "$.taskresult.Status",
+                "StringEquals": "READY",
+                "Next": "Handle Success"
+              },
+              {
+                "Variable": "$.taskresult.Status",
+                "StringEquals": "RETRYLIMITREACH",
+                "Next": "Handle Failure"
+              },
+              {
+                "Variable": "$.taskresult.Status",
+                "StringEquals": "FAILED",
+                "Next": "Handle Failure"
+              }
+            ],
+            "Default": "Handle Failure"
+          },
+          "Raw File Crawler Wait": {
+            "Type": "Wait",
+            "Seconds": 30,
+            "Next": "Crawler Status Check"
+          },
+          "Fail": {
+            "Type": "Fail",
+            "Cause": "validation failed",
+            "Error": "ValidationError"
+          },
+          "Handle Success": {
+            "Type": "Pass",
+            "Parameters": {
+              "StateMachineName.$": "$$.StateMachine.Name",
+              "ExecutionName.$": "$$.Execution.Name",
+              "ExecutionTime.$": "$$.Execution.StartTime"
+            },
+            "ResultPath": "$.taskresult",
+            "Next": "Success Notification"
+          },
+          "Success Notification": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::aws-sdk:sns:publish",
+            "Parameters": {
+              "Message.$": "States.Format('Successful task. StateMachine: {}, Name: {}, Time: {}', $.taskresult.StateMachineName, $.taskresult.ExecutionName, $.taskresult.ExecutionTime)",
+              "TopicArn": "${SNSTopic}"
+            },
+            "End": true
+          }
+        }
+        }
 
   SNSTopic:
     Type: AWS::SNS::Topic
@@ -651,8 +817,66 @@ Resources:
         S3Targets:
           - Path: s3://data-architecture-layer/alpha/stage
 
+##Metadata to check extraction - resources
+
+  DynamoFormatMetadata:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref DynamoFormatMetadataName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: !Ref DynamoFormatMetadataKey
+        AttributeType: S
+
+      KeySchema:
+      - AttributeName: !Ref DynamoFormatMetadataKey
+        KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+
+##Monitoring services cloudwatch
+
+  PipelineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref PipelineLogGroupName
+      RetentionInDays: 30
+
+  ExtractLogStream:
+    Type: AWS::Logs::LogStream
+    DependsOn: PipelineLogGroup
+    Properties: 
+      LogGroupName: !Ref PipelineLogGroupName
+      LogStreamName: !Ref ExtractLogStreamName
+
+  TransformLogStream:
+    Type: AWS::Logs::LogStream
+    DependsOn: PipelineLogGroup
+    Properties: 
+      LogGroupName: !Ref PipelineLogGroupName
+      LogStreamName: !Ref TransformLogStreamName
+
+  LoadLogStream:
+    Type: AWS::Logs::LogStream
+    DependsOn: PipelineLogGroup
+    Properties: 
+      LogGroupName: !Ref PipelineLogGroupName
+      LogStreamName: !Ref LoadLogStreamName
+
+  ResultLogStream:
+    Type: AWS::Logs::LogStream
+    DependsOn: PipelineLogGroup
+    Properties: 
+      LogGroupName: !Ref PipelineLogGroupName
+      LogStreamName: !Ref ResultLogStreamName
 
 Outputs:
   GlueDBOutput:
     Description: GlueDB Name
     Value: !Ref GlueDB
+  StepFunctionName:
+    Description: StepFunction Name
+    Value: !Ref MyStepFunction
+  DLQName:
+    Description: DLQ Name
+    Value: !Select [5, !Split [":", !GetAtt MyDeadLetterQueue.Arn]]
