@@ -1,0 +1,24 @@
+Transform: AWS::Serverless-2016-10-31
+Description: This is a template to create ETL pipeline pattern with AWS Step Functions
+Parameters:
+  pS3BucketName:
+    Type: String
+    Description: S3 bucket
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9_-]*'
+  pEmailforNotification:
+    Description: Valid email address to send success or error notification
+    Type: String
+Resources:
+  BasicRolesNPolicies:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/BasicRolesNPolicies.yaml
+      Parameters:
+        pS3BucketName:
+          Ref: pS3BucketName
+  QueueManagement:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/QueueManagement.yaml
+      Parameters:
+        Ref: pEmailforNotification

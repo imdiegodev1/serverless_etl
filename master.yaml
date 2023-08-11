@@ -18,12 +18,12 @@ Resources:
   BasicRolesNPolicies:
     Type: "AWS::CloudFormation::Stack"
     Properties:
-      TemplateURL: ''
+      TemplateURL: 'https://code-diego-dsi.s3.amazonaws.com/BasicRolesNPolicies.yaml'
       Parameters:
         pS3BucketName: !Ref pS3BucketName
 
   QueueManagement:
     Type: "AWS::CloudFormation::Stack"
     Properties:
-      TemplateURL: ''
+      TemplateURL: 'https://code-diego-dsi.s3.amazonaws.com/QueueManagement.yaml'
       Parameters: !Ref pEmailforNotification

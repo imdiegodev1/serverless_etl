@@ -49,3 +49,15 @@ Resources:
           Resource:  !GetAtt FirstSqsQueue.Arn
       Queues:
         - Ref: FirstSqsQueue
+
+Outputs:
+
+  SecondSqsQueue:
+    Value: !Ref SecondSqsQueue
+    Export:
+      Name: SecondSqsQueue
+
+  SNSTopic:
+    Value: !Ref SNSTopic
+    Export:
+      Name: SNSTopic
