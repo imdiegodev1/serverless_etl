@@ -1,0 +1,163 @@
+Transform: AWS::Serverless-2016-10-31
+
+Description: "Template to create roles and policies needed"
+
+Parameters:
+
+  pS3BucketName:
+    Type: String
+    Description: "S3 bucket"
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9_-]*"
+
+Resources:
+
+  #Coudebuild
+#  CodeBuildRole:
+#    Type: "AWS::IAM::Role"
+#    Properties:
+#      AssumeRolePolicyDocument:
+#        Version: "2012-10-17"
+#        Statement:
+#          - Effect: "Allow"
+#            Principal:
+#              Service:
+#                - "codebuild.amazonaws.com"
+#            Action:
+#              - "sts:AssumeRole"
+#      ManagedPolicyArns:
+#          - !Ref BasicManagedPolicyforCodeBuild
+#
+#  BasicManagedPolicyforCodeBuild:
+#    Type: "AWS::IAM::ManagedPolicy"
+#    Properties:
+#      Description: "This is sample CFN template"
+#      PolicyDocument:
+#        Version: "2012-10-17"
+#        Statement:
+#          - Sid: "lambdalayeraccess"
+#            Effect: "Allow"
+#            Action:
+#              -  "lambda:Publish*"
+#              -  "lambda:List*"
+#            Resource:
+#              - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:${AWS::StackName}-pandas-layer"
+#              - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:${AWS::StackName}-auxiliar-layer"
+#
+#          - Sid: "logaccess"
+#            Effect: "Allow"
+#            Action:
+#              -  logs:CreateLogGroup
+#              -  logs:CreateLogStream
+#              -  logs:PutLogEvents
+#            Resource: "*"
+#          - Sid: "SSMPutparamater"
+#            Effect: "Allow"
+#            Action:
+#              - ssm:PutParameter
+#            Resource:
+#              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${LambdaLayerParameter}"
+#              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${LambdaLayerParameterAuxiliar}"
+
+  #Stepfunction
+  StepFunctionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "states.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+          - !Ref ManagedPolicyforstepfunction
+
+  ManagedPolicyforstepfunction:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      Description: "This is sample CFN template"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "s3listaccess"
+            Effect: "Allow"
+            Action: "lambda:InvokeFunction"
+            Resource:
+              - "*"
+          - Sid: "glueaccess"
+            Effect: "Allow"
+            Action:
+              - "glue:StartJobRun"
+              - "glue:GetJobRun"
+              - "glue:GetJobRuns"
+              - "glue:BatchStopJobRun"
+            Resource: "*"
+          - Sid: "xrayaccess"
+            Effect: "Allow"
+            Action:
+              -  "xray:PutTraceSegments"
+              -  "xray:PutTelemetryRecords"
+              -  "xray:GetSamplingRules"
+              -  "xray:GetSamplingTargets"
+            Resource: "*"
+          - Sid: snsaccess
+            Effect: Allow
+            Action:
+              - sns:*
+            Resource: '*'
+
+  #Glue
+  GlueRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "glue.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        -
+          PolicyName: "root"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: "s3listaccess"
+                Effect: "Allow"
+                Action:
+                  - "s3:List*"
+                Resource: !Sub "arn:aws:s3:::${pS3BucketName}"
+              - Sid: "s3putaccess"
+                Effect: "Allow"
+                Action:
+                  - "s3:Get*"
+                  - "s3:Put*"
+                  - "s3:Delete*"
+                Resource: !Sub "arn:aws:s3:::${pS3BucketName}/*"
+              - Sid: "glue"
+                Effect: "Allow"
+                Action: "glue:*"
+                Resource:
+                    - "*"
+              - Sid: "glueTables"
+                Effect: "Allow"
+                Action: "glue:CreateTable"
+                Resource:
+                  - "*"
+              - Sid: "cwlog"
+                Effect: "Allow"
+                Action: "logs:*"
+                Resource:
+                    - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws-glue/*"
+
+Outputs:
+  GlueRole:
+    Value: !Ref GlueRole
+    Export:
+      Name: GlueRole

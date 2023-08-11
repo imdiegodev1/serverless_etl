@@ -1,0 +1,51 @@
+Transform: AWS::Serverless-2016-10-31
+
+Description: "Template to create Queues services"
+
+Parameters:
+  pEmailforNotification:
+    Description: "Valid email address to send success or error notification"
+    Type: String
+
+Resources:
+
+  MyDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600  # 14 days
+      DelaySeconds: 60 #for alarms
+
+  FirstSqsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt MyDeadLetterQueue.Arn
+        maxReceiveCount: 5
+
+  SecondSqsQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt MyDeadLetterQueue.Arn
+          maxReceiveCount: 5
+
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      KmsMasterKeyId: "alias/aws/sns"
+      Subscription:
+        - Endpoint: !Ref pEmailforNotification
+          Protocol: email
+
+  EventBridgeToToSqsPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: events.amazonaws.com
+          Action: SQS:SendMessage
+          Resource:  !GetAtt FirstSqsQueue.Arn
+      Queues:
+        - Ref: FirstSqsQueue

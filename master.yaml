@@ -9,28 +9,21 @@ Parameters:
     Description: "S3 bucket"
     AllowedPattern: "[a-zA-Z][a-zA-Z0-9_-]*"
 
+  pEmailforNotification:
+    Description: "Valid email address to send success or error notification"
+    Type: String
+
 Resources:
-  ##Stack 0
-  LambdaLayer:
+  ##Stack 0 - Roles and Policies
+  BasicRolesNPolicies:
     Type: "AWS::CloudFormation::Stack"
     Properties:
-      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/LambdaLayer.yaml
-  
-  ##Stack 1
-  CodeBuildProject:
-    Type: "AWS::CloudFormation::Stack"
-    DependsOn: LambdaLayer
-    Properties:
-      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/CodeBuild.yaml
+      TemplateURL: ''
       Parameters:
-        LambdaLayerParameter: !GetAtt LambdaLayer.Outputs.LambdaLayerParameter
         pS3BucketName: !Ref pS3BucketName
 
-  ##Stack2
-  LambdaUtils:
+  QueueManagement:
     Type: "AWS::CloudFormation::Stack"
-    DependsOn: CodeBuildProject
     Properties:
-      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/LambdaUtils.yaml
-      Parameters:
-        CodeBuildProject: !GetAtt CodeBuildProject.Outputs.CodeBuildProject
+      TemplateURL: ''
+      Parameters: !Ref pEmailforNotification
