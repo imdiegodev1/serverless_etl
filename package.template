@@ -20,3 +20,8 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: https://code-diego-dsi.s3.amazonaws.com/SecurityParamsConnection.yaml
+  CodeBuildRolesNPolicies:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SecurityParamsConnection
+    Properties:
+      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/CodeBuildRolesNPolicies.yaml

@@ -31,10 +31,22 @@ Resources:
       Type: "AWS::CloudFormation::Stack"
       DependsOn: SecurityParamsConnection
       Properties:
-        TemplateURL: ''
+        TemplateURL: 'https://code-diego-dsi.s3.amazonaws.com/CodeBuildRolesNPolicies.yaml'
+        Parameters:
+          LambdaLayerParameter: LambdaLayerParameterFromSecurityParamsConnection
+          LambdaLayerParameterAuxiliar: LambdaLayerParameterAuxiliarFromSecurityParamsConnection
 
 #  QueueManagement:
 #    Type: "AWS::CloudFormation::Stack"
 #    Properties:
 #      TemplateURL: 'https://code-diego-dsi.s3.amazonaws.com/QueueManagement.yaml'
 #      Parameters: !Ref pEmailforNotification
+
+  Outputs:
+    LambdaLayerParameterFromSecurityParamsConnection:
+      Description:
+      Value: !GetAtt SecurityParamsConnection.Outputs.LambdaLayerParameter
+
+    LambdaLayerParameterAuxiliarFromSecurityParamsConnection:
+      Description:
+      Value: !GetAtt SecurityParamsConnection.Outputs.LambdaLayerParameterAuxiliar

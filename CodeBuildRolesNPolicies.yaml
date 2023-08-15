@@ -2,6 +2,16 @@ Transform: AWS::Serverless-2016-10-31
 
 Description: "Template to create CodeBuild roles and policies"
 
+Parameters:
+
+  LambdaLayerParameterAuxiliar:
+    Type: String
+    Description: 'Important parameter to relate codebuild service with secrets manager service'
+
+  LambdaLayerParameter:
+    Type: String
+    Description: 'Important parameter to relate codebuild service with secrets manager service'
+
 Resources:
 
   #Coudebuild
