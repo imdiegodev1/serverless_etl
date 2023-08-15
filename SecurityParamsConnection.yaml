@@ -2,8 +2,6 @@ Transform: AWS::Serverless-2016-10-31
 
 Description: "Parameters to connect lambdas to secret manager service"
 
-Parameters:
-
 Resources:
 
   LambdaLayerParameter:

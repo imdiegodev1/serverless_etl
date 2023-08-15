@@ -16,3 +16,7 @@ Resources:
       Parameters:
         pS3BucketName:
           Ref: pS3BucketName
+  SecurityParamsConnection:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/SecurityParamsConnection.yaml
