@@ -1,0 +1,52 @@
+Transform: AWS::Serverless-2016-10-31
+
+Description: "Template to create CodeBuild roles and policies"
+
+Resources:
+
+  #Coudebuild
+  CodeBuildRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "codebuild.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+          - !Ref BasicManagedPolicyforCodeBuild
+
+  BasicManagedPolicyforCodeBuild:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      Description: "This is sample CFN template"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "lambdalayeraccess"
+            Effect: "Allow"
+            Action:
+              -  "lambda:Publish*"
+              -  "lambda:List*"
+            Resource:
+              - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:${AWS::StackName}-pandas-layer"
+              - !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:${AWS::StackName}-auxiliar-layer"
+
+          - Sid: "logaccess"
+            Effect: "Allow"
+            Action:
+              -  logs:CreateLogGroup
+              -  logs:CreateLogStream
+              -  logs:PutLogEvents
+            Resource: "*"
+          - Sid: "SSMPutparamater"
+            Effect: "Allow"
+            Action:
+              - ssm:PutParameter
+            Resource:
+              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${LambdaLayerParameter}"
+              - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${LambdaLayerParameterAuxiliar}"
