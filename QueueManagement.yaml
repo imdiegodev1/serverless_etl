@@ -17,6 +17,7 @@ Resources:
 
   FirstSqsQueue:
     Type: AWS::SQS::Queue
+    DependsOn: MyDeadLetterQueue
     Properties:
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt MyDeadLetterQueue.Arn
@@ -24,6 +25,7 @@ Resources:
 
   SecondSqsQueue:
       Type: AWS::SQS::Queue
+      DependsOn: MyDeadLetterQueue
       Properties:
         RedrivePolicy:
           deadLetterTargetArn: !GetAtt MyDeadLetterQueue.Arn
@@ -39,6 +41,7 @@ Resources:
 
   EventBridgeToToSqsPolicy:
     Type: AWS::SQS::QueuePolicy
+    DependsOn: FirstSqsQueue
     Properties:
       PolicyDocument:
         Statement:

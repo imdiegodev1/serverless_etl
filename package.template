@@ -16,9 +16,3 @@ Resources:
       Parameters:
         pS3BucketName:
           Ref: pS3BucketName
-  QueueManagement:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/QueueManagement.yaml
-      Parameters:
-        Ref: pEmailforNotification
