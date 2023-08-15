@@ -25,3 +25,12 @@ Resources:
     DependsOn: SecurityParamsConnection
     Properties:
       TemplateURL: https://code-diego-dsi.s3.amazonaws.com/CodeBuildRolesNPolicies.yaml
+      Parameters:
+        LambdaLayerParameter:
+          Fn::GetAtt:
+          - SecurityParamsConnection
+          - Outputs.LambdaLayerParameter
+        LambdaLayerParameterAuxiliar:
+          Fn::GetAtt:
+          - SecurityParamsConnection
+          - Outputs.LambdaLayerParameterAuxiliar
