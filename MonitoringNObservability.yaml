@@ -52,7 +52,7 @@ Resources:
         detail-type:
           - 'Amazon SQS Message'
         resources:
-          - MyDeadLetterQueueArn
+          - !Ref MyDeadLetterQueueArn
       State: ENABLED
       Targets:
         - Arn: !Ref SNSTopic
@@ -66,7 +66,7 @@ Resources:
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
         - Name: QueueName
-          Value: !Select [5, !Split [":", MyDeadLetterQueueArn]]
+          Value: !Select [5, !Split [":", !Ref MyDeadLetterQueueArn]]
       Statistic: Sum
       Period: 300 #seconds
       EvaluationPeriods: 1
@@ -141,7 +141,7 @@ Resources:
         source:
           - "demo.sqs"
       Targets:
-        - Arn: FirstSqsQueueArn
+        - Arn: !Ref FirstSqsQueueArn
           Id: "SQSqueue"
 
   # Dead Letter Queue
@@ -179,5 +179,5 @@ Resources:
               - kms:Encrypt
               - kms:Decrypt
             Resource:
-              - MyDeadLetterQueueArn
+              - !Ref MyDeadLetterQueueArn
               - !GetAtt MyCloudWatchAlarm.Arn
