@@ -75,14 +75,8 @@ Resources:
         ResultLogStreamName:
           Ref: ResultLogStreamName
         MyDeadLetterQueue:
-          Fn::GetAtt:
-          - QueueManagement
-          - Outputs.MyDeadLetterQueue
+          Ref: QueueManagement.Outputs.MyDeadLetterQueue
         SNSTopic:
-          Fn::GetAtt:
-          - QueueManagement
-          - Outputs.SNSTopic
+          Ref: QueueManagement.Outputs.SNSTopic
         FirstSqsQueue:
-          Fn::GetAtt:
-          - QueueManagement
-          - Outputs.FirstSqsQueue
+          Ref: QueueManagement.Outputs.FirstSqsQueue

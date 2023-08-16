@@ -76,6 +76,6 @@ Resources:
         TransformLogStreamName: !Ref TransformLogStreamName
         LoadLogStreamName: !Ref LoadLogStreamName
         ResultLogStreamName: !Ref ResultLogStreamName
-        MyDeadLetterQueue: !GetAtt QueueManagement.Outputs.MyDeadLetterQueue
-        SNSTopic: !GetAtt QueueManagement.Outputs.SNSTopic
-        FirstSqsQueue: !GetAtt QueueManagement.Outputs.FirstSqsQueue
+        MyDeadLetterQueue: !Ref QueueManagement.Outputs.MyDeadLetterQueue
+        SNSTopic: !Ref QueueManagement.Outputs.SNSTopic
+        FirstSqsQueue: !Ref QueueManagement.Outputs.FirstSqsQueue

@@ -70,11 +70,6 @@ Outputs:
     Export:
       Name: FirstSqsQueueAtt
 
-#  SecondSqsQueueAtt:
-#    Value: !GetAtt SecondSqsQueue
-#    Export:
-#      Name: SecondSqsQueueAtt
-
   MyDeadLetterQueue:
     Value: !Ref MyDeadLetterQueue
     Export:
