@@ -77,7 +77,7 @@ Resources:
         MyDeadLetterQueue:
           Fn::GetAtt:
           - QueueManagement
-          - Outputs.MyDeadLetter
+          - Outputs.MyDeadLetterQueue
         SNSTopic:
           Fn::GetAtt:
           - QueueManagement
