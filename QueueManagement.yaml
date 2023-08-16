@@ -55,12 +55,27 @@ Resources:
 
 Outputs:
 
-  SecondSqsQueue:
+  SecondSqsQueueRef:
     Value: !Ref SecondSqsQueue
     Export:
-      Name: SecondSqsQueue
+      Name: SecondSqsQueueRef
 
   SNSTopic:
     Value: !Ref SNSTopic
     Export:
       Name: SNSTopic
+
+  FirstSqsQueueAtt:
+    Value: !GetAtt FirstSqsQueue
+    Export:
+      Name: FirstSqsQueueAtt
+
+  SecondSqsQueueAtt:
+    Value: !GetAtt SecondSqsQueue
+    Export:
+      Name: SecondSqsQueueAtt
+
+  MyDeadLetterQueue:
+    Value: !GetAtt MyDeadLetterQueue
+    Export:
+      Name: MyDeadLetterQueue

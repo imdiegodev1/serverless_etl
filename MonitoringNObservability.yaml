@@ -2,7 +2,8 @@ Transform: AWS::Serverless-2016-10-31
 
 Description: "Template to create observability resources"
 
-Parameteres:
+Parameters:
+
   DynamoFormatMetadataName:
     Description: "Dynamo metadata table name to store data formats of data extraction pipelines"
     Type: String
@@ -25,8 +26,51 @@ Parameteres:
 
   ResultLogStreamName:
     Type: String
+
+  MyDeadLetterQueue:
+    Type: String
+
+  SNSTopic:
+    Type: String
+
+  FirstSqsQueue:
+    Type: String
   
 Resources:
+
+  #Cloudwatch
+
+  MyCloudWatchEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+        source:
+          - aws.sqs
+        detail-type:
+          - 'Amazon SQS Message'
+        resources:
+          - !GetAtt MyDeadLetterQueue.Arn
+      State: ENABLED
+      Targets:
+        - Arn: !Ref SNSTopic
+          Id: MySnsTarget
+
+  MyCloudWatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm for DLQ message count
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !Select [5, !Split [":", !GetAtt MyDeadLetterQueue.Arn]]
+      Statistic: Sum
+      Period: 300 #seconds
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref SNSTopic
 
   ##Metadata to check extraction - resources
 
@@ -80,3 +124,57 @@ Resources:
     Properties:
       LogGroupName: !Ref PipelineLogGroupName
       LogStreamName: !Ref ResultLogStreamName
+
+  # Define the event rule to filter for events
+  
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "EventRule"
+      ScheduleExpression: rate(1 day)
+      EventPattern:
+        account:
+          - !Sub '${AWS::AccountId}'
+        source:
+          - "demo.sqs"
+      Targets:
+        - Arn: !GetAtt FirstSqsQueue.Arn
+          Id: "SQSqueue"
+
+  # Dead Letter Queue
+
+  MyDLQQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref MyDeadLetterQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Action:
+              - sns:Publish
+              - sns.Subscribe
+              - sns:SendMessage
+              - sqs:GetQueueAttributes
+              - sqs:ListDeadLetterSourceQueues
+              - cloudwatch:PutMetricData
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:GenerateDataKey
+            Resource: '*'
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+              - sqs:ListDeadLetterSourceQueues
+              - cloudwatch:PutMetricData
+              - kms:Encrypt
+              - kms:Decrypt
+            Resource:
+              - !GetAtt MyDeadLetterQueue.Arn
+              - !GetAtt MyCloudWatchAlarm.Arn

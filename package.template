@@ -34,3 +34,10 @@ Resources:
           Fn::GetAtt:
           - SecurityParamsConnection
           - Outputs.LambdaLayerParameterAuxiliar
+  QueueManagement:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/QueueManagement.yaml
+      Parameters:
+        pEmailforNotification:
+          Ref: pEmailforNotification
