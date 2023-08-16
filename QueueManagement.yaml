@@ -73,9 +73,9 @@ Outputs:
   MyDeadLetterQueueArn:
     Value: !GetAtt MyDeadLetterQueue.Arn
     Export:
-      Name: MyDeadLetterQueue
+      Name: MyDeadLetterQueueRef
 
   MyDeadLetterQueueRef:
     Value: !Ref MyDeadLetterQueue
     Export:
-      Name: MyDeadLetterQueue
+      Name: MyDeadLetterQueueArn
