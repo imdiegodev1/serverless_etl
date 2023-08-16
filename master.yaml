@@ -79,4 +79,4 @@ Resources:
         MyDeadLetterQueueArn: !GetAtt QueueManagement.Outputs.MyDeadLetterQueueArn
         MyDeadLetterQueueRef: !GetAtt QueueManagement.Outputs.MyDeadLetterQueueRef
         SNSTopic: !GetAtt QueueManagement.Outputs.SNSTopic
-        FirstSqsQueue: !GetAtt QueueManagement.Outputs.FirstSqsQueue
+        FirstSqsQueueArn: !GetAtt QueueManagement.Outputs.FirstSqsQueueArn

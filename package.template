@@ -86,7 +86,7 @@ Resources:
           Fn::GetAtt:
           - QueueManagement
           - Outputs.SNSTopic
-        FirstSqsQueue:
+        FirstSqsQueueArn:
           Fn::GetAtt:
           - QueueManagement
-          - Outputs.FirstSqsQueue
+          - Outputs.FirstSqsQueueArn

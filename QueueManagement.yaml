@@ -65,10 +65,15 @@ Outputs:
     Export:
       Name: SNSTopic
 
-  FirstSqsQueue:
+  FirstSqsQueueRef:
     Value: !Ref FirstSqsQueue
     Export:
-      Name: FirstSqsQueueAtt
+      Name: FirstSqsQueueRef
+
+  FirstSqsQueueArn:
+    Value: !GetAtt FirstSqsQueue.Arn
+    Export:
+      Name: FirstSqsQueueArn
 
   MyDeadLetterQueueArn:
     Value: !GetAtt MyDeadLetterQueue.Arn

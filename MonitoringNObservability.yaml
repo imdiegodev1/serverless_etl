@@ -36,7 +36,7 @@ Parameters:
   SNSTopic:
     Type: String
 
-  FirstSqsQueue:
+  FirstSqsQueueArn:
     Type: String
   
 Resources:
@@ -141,7 +141,7 @@ Resources:
         source:
           - "demo.sqs"
       Targets:
-        - Arn: !GetAtt FirstSqsQueue.Arn
+        - Arn: FirstSqsQueueArn
           Id: "SQSqueue"
 
   # Dead Letter Queue
