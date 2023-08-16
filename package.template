@@ -8,6 +8,20 @@ Parameters:
   pEmailforNotification:
     Description: Valid email address to send success or error notification
     Type: String
+  DynamoFormatMetadataName:
+    Type: String
+  DynamoFormatMetadataKey:
+    Type: String
+  PipelineLogGroupName:
+    Type: String
+  ExtractLogStreamName:
+    Type: String
+  TransformLogStreamName:
+    Type: String
+  LoadLogStreamName:
+    Type: String
+  ResultLogStreamName:
+    Type: String
 Resources:
   BasicRolesNPolicies:
     Type: AWS::CloudFormation::Stack
@@ -41,3 +55,34 @@ Resources:
       Parameters:
         pEmailforNotification:
           Ref: pEmailforNotification
+  MonitoringNObservability:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://code-diego-dsi.s3.amazonaws.com/MonitoringNObservability.yaml
+      Parameters:
+        DynamoFormatMetadataName:
+          Ref: DynamoFormatMetadataName
+        DynamoFormatMetadataKey:
+          Ref: DynamoFormatMetadataKey
+        PipelineLogGroupName:
+          Ref: PipelineLogGroupName
+        ExtractLogStreamName:
+          Ref: ExtractLogStreamName
+        TransformLogStreamName:
+          Ref: TransformLogStreamName
+        LoadLogStreamName:
+          Ref: LoadLogStreamName
+        ResultLogStreamName:
+          Ref: ResultLogStreamName
+        MyDeadLetterQueue:
+          Fn::GetAtt:
+          - QueueManagement
+          - Outputs.MyDeadLetter
+        SNSTopic:
+          Fn::GetAtt:
+          - QueueManagement
+          - Outputs.SNSTopic
+        FirstSqsQueue:
+          Fn::GetAtt:
+          - QueueManagement
+          - Outputs.FirstSqsQueue
