@@ -27,7 +27,10 @@ Parameters:
   ResultLogStreamName:
     Type: String
 
-  MyDeadLetterQueue:
+  MyDeadLetterQueueArn:
+    Type: String
+
+  MyDeadLetterQueueRef:
     Type: String
 
   SNSTopic:
@@ -49,7 +52,7 @@ Resources:
         detail-type:
           - 'Amazon SQS Message'
         resources:
-          - !GetAtt MyDeadLetterQueue.Arn
+          - MyDeadLetterQueueArn
       State: ENABLED
       Targets:
         - Arn: !Ref SNSTopic
@@ -63,7 +66,7 @@ Resources:
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
         - Name: QueueName
-          Value: !Select [5, !Split [":", !GetAtt MyDeadLetterQueue.Arn]]
+          Value: !Select [5, !Split [":", MyDeadLetterQueueArn]]
       Statistic: Sum
       Period: 300 #seconds
       EvaluationPeriods: 1
@@ -147,7 +150,7 @@ Resources:
     Type: AWS::SQS::QueuePolicy
     Properties:
       Queues:
-        - !Ref MyDeadLetterQueue
+        - !Ref MyDeadLetterQueueRef
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -176,5 +179,5 @@ Resources:
               - kms:Encrypt
               - kms:Decrypt
             Resource:
-              - !GetAtt MyDeadLetterQueue.Arn
+              - MyDeadLetterQueueArn
               - !GetAtt MyCloudWatchAlarm.Arn

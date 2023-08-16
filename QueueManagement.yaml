@@ -70,7 +70,12 @@ Outputs:
     Export:
       Name: FirstSqsQueueAtt
 
-  MyDeadLetterQueue:
+  MyDeadLetterQueueArn:
+    Value: !GetAtt MyDeadLetterQueue.Arn
+    Export:
+      Name: MyDeadLetterQueue
+
+  MyDeadLetterQueueRef:
     Value: !Ref MyDeadLetterQueue
     Export:
       Name: MyDeadLetterQueue
