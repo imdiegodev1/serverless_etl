@@ -64,6 +64,11 @@ Resources:
       Parameters:
         pEmailforNotification: !Ref pEmailforNotification
 
+  HighLevelLayer:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      TemplateURL: ''
+
   MonitoringNObservability:
     Type: "AWS::CloudFormation::Stack"
     Properties:

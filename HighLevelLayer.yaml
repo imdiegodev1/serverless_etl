@@ -1,0 +1,34 @@
+Transform: AWS::Serverless-2016-10-31
+
+Description: "Template to create high level layers in order to store libraries and codes"
+
+Resources:
+
+  LambdaLayerCfn:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: cfnresource-lib
+      Description: My layer
+      ContentUri: ./myLayerCfn
+      CompatibleRuntimes:
+        - python3.10
+      LicenseInfo: MIT
+
+  LambdaLayerFactory:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: etlfactory
+      Description: My layer
+      ContentUri: ./myLayerFactory
+      CompatibleRuntimes:
+        - python3.10
+      LicenseInfo: MIT
+
+Outputs:
+  LambdaLayerCfn:
+    Description: LambdaLayerCfn Ref
+    Value: !Ref LambdaLayerCfn
+
+  LambdaLayerFactory: LambdaLayerFactory Ref
+    Description:
+    Value: !Ref LambdaLayerFactory
